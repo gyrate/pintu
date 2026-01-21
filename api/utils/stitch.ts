@@ -92,7 +92,7 @@ export async function stitchImages(images: ImageItem[], direction: 'down' | 'rig
     create: {
       width: totalWidth,
       height: totalHeight,
-      channels: 4,
+      channels: 4, // 4 通道 RGBA
       background: { r: 255, g: 255, b: 255, alpha: 1 }
     }
   })

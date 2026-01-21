@@ -82,7 +82,9 @@ const deleteImage = async (index: number) => {
 
 const moveImage = (index: number, offset: number) => {
   const newIndex = index + offset;
-  if (newIndex < 0 || newIndex >= images.value.length) return;
+  if (newIndex < 0 || newIndex >= images.value.length) {
+    return;
+  }
   
   const temp = images.value[index];
   images.value[index] = images.value[newIndex];
