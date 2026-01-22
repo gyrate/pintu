@@ -28,11 +28,30 @@ export const api = {
   }),
   
   // Admin APIs (Assuming admin can see all tasks/users)
-  getTasks: (userId?: string) => request(userId ? `/tasks?userId=${userId}` : '/tasks'),
+  getTasks: (userId?: string, page: number = 1, pageSize: number = 10) => {
+    let url = `/tasks?page=${page}&pageSize=${pageSize}`;
+    if (userId) url += `&userId=${userId}`;
+    return request(url);
+  },
   
   deleteTask: (id: string) => request(`/tasks/${id}`, {
     method: 'DELETE'
   }),
 
-  getUsers: () => request('/users'),
+  getUsers: (page: number = 1, pageSize: number = 10) => request(`/users?page=${page}&pageSize=${pageSize}`),
+  createUser: (data: any) => request('/users', { method: 'POST', body: JSON.stringify(data) }),
+  updateUser: (id: string, data: any) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteUser: (id: string) => request(`/users/${id}`, { method: 'DELETE' }),
+  
+  resetPassword: (userId: string, password: string) => request(`/users/${userId}/password`, {
+    method: 'POST',
+    body: JSON.stringify({ password })
+  }),
+
+  getImages: (page: number = 1, pageSize: number = 10) => request(`/images?page=${page}&pageSize=${pageSize}`),
+  deleteImage: (id: string) => request(`/images/${id}`, { method: 'DELETE' }),
+
+  getResults: (page: number = 1, pageSize: number = 10) => request(`/tasks/results?page=${page}&pageSize=${pageSize}`),
+
+  getDashboardStats: () => request('/dashboard/stats'),
 };

@@ -22,9 +22,9 @@ export async function request(endpoint: string, options: RequestInit = {}) {
 }
 
 export const api = {
-  login: (phone: string, code: string) => request('/auth/login', {
+  login: (phone: string, code?: string, password?: string, type: 'code' | 'password' = 'code') => request('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ phone, code })
+    body: JSON.stringify({ phone, code, password, type })
   }),
   
   getTasks: (userId: string) => request(`/tasks?userId=${userId}`),

@@ -31,6 +31,39 @@ async function ensureBucket() {
 // 移除顶层调用，改为懒加载或者允许失败
 ensureBucket().catch(e => console.warn('Bucket check skipped:', e.message));
 
+// 获取图片列表
+router.get('/', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const pageSize = parseInt(req.query.pageSize as string) || 10;
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize - 1;
+
+        const { data: images, error, count } = await supabaseAdmin
+            .from('images')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(start, end);
+        
+        if (error) throw error;
+        
+        // 生成 URL
+        const imagesWithUrl = images.map((img: any) => ({
+            ...img,
+            url: supabaseAdmin.storage.from(BUCKET_NAME).getPublicUrl(img.storage_path).data.publicUrl
+        }));
+
+        res.json({
+            list: imagesWithUrl,
+            total: count,
+            page,
+            pageSize
+        });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 上传图片
 router.post('/upload', upload.single('file'), async (req, res) => {
   try {
