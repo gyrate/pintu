@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from './stores/user';
-import { DataAnalysis, User, List as ListIcon } from '@element-plus/icons-vue';
+import { DataAnalysis, User, List as ListIcon, Picture, Files } from '@element-plus/icons-vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -42,6 +42,14 @@ const handleLogout = () => {
             <el-menu-item index="/tasks">
               <el-icon><ListIcon /></el-icon>
               <span>任务管理</span>
+            </el-menu-item>
+            <el-menu-item index="/media">
+              <el-icon><Picture /></el-icon>
+              <span>媒体管理</span>
+            </el-menu-item>
+            <el-menu-item index="/results">
+              <el-icon><Files /></el-icon>
+              <span>生成结果</span>
             </el-menu-item>
           </el-menu>
         </el-aside>

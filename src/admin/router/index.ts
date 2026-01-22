@@ -29,8 +29,20 @@ const routes: RouteRecordRaw[] = [
     name: 'Tasks',
     component: () => import('../pages/TaskList.vue'),
     meta: { requiresAuth: true, title: '任务管理' }
+  },
+  {
+    path: '/media',
+    name: 'MediaList',
+    component: () => import('../pages/MediaList.vue'),
+    meta: { title: '媒体管理' }
+  },
+  {
+    path: '/results',
+    name: 'ResultList',
+    component: () => import('../pages/ResultList.vue'),
+    meta: { title: '生成结果' }
   }
-]
+];
 
 const router = createRouter({
   history: createWebHashHistory(),

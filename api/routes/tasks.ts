@@ -5,19 +5,61 @@ import { stitchImages } from '../utils/stitch.js';
 const router = Router();
 const BUCKET_NAME = 'pintu-images';
 
+// 获取所有生成结果（已完成的任务）
+router.get('/results', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const pageSize = parseInt(req.query.pageSize as string) || 10;
+        const start = (page - 1) * pageSize;
+        const end = start + pageSize - 1;
+
+        const { data: tasks, error, count } = await supabaseAdmin
+            .from('tasks')
+            .select('*', { count: 'exact' })
+            .eq('status', 'completed')
+            .not('export_url', 'is', null)
+            .order('updated_at', { ascending: false })
+            .range(start, end);
+        
+        if (error) throw error;
+        res.json({
+            list: tasks,
+            total: count,
+            page,
+            pageSize
+        });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 获取任务列表
 router.get('/', async (req, res) => {
   try {
     const { userId } = req.query;
-    let query = supabaseAdmin.from('tasks').select('*').order('created_at', { ascending: false });
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize - 1;
+
+    let query = supabaseAdmin
+        .from('tasks')
+        .select('*, user:users(nickname, phone)', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(start, end);
     
     if (userId) {
       query = query.eq('user_id', userId);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) throw error;
-    res.json(data);
+    res.json({
+        list: data,
+        total: count,
+        page,
+        pageSize
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
