@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.js';
 import taskRoutes from './routes/tasks.js';
 import imageRoutes from './routes/images.js';
 import userRoutes from './routes/users.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

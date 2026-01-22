@@ -52,4 +52,6 @@ export const api = {
   deleteImage: (id: string) => request(`/images/${id}`, { method: 'DELETE' }),
 
   getResults: (page: number = 1, pageSize: number = 10) => request(`/tasks/results?page=${page}&pageSize=${pageSize}`),
+
+  getDashboardStats: () => request('/dashboard/stats'),
 };

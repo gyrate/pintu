@@ -94,6 +94,16 @@ router.post('/login', async (req, res) => {
         }
     }
 
+    // 记录登录日志 (如果用户已存在且是数据库模式)
+    if (user && !user.id.startsWith('mock-') && !dbError) {
+        try {
+            await supabaseAdmin.from('login_logs').insert({ user_id: user.id });
+        } catch (logError) {
+            console.warn('Failed to record login log:', logError);
+            // 登录日志失败不影响主流程
+        }
+    }
+
     // 返回用户信息
     res.json({
       token: 'mock-jwt-token-' + user.id, // 暂时返回 mock token
