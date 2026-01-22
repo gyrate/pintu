@@ -15,6 +15,12 @@ const handleLogout = () => {
   userStore.logout();
   router.push('/login');
 };
+
+const handleCommand = (command: string) => {
+  if (command === 'logout') {
+    handleLogout();
+  }
+};
 </script>
 
 <template>
@@ -58,7 +64,20 @@ const handleLogout = () => {
             <div class="breadcrumb">
               {{ route.meta.title || '后台管理' }}
             </div>
-            <el-button type="danger" link @click="handleLogout">退出登录</el-button>
+            <div class="user-info">
+              <el-dropdown trigger="hover" @command="handleCommand">
+                <div class="el-dropdown-link">
+                  <el-avatar :size="32" :src="userStore.user?.avatar" :icon="User" />
+                  <span class="username">{{ userStore.user?.nickname || userStore.user?.phone || '管理员' }}</span>
+                  <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                </div>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </el-header>
           <el-main>
             <router-view />
@@ -100,6 +119,20 @@ const handleLogout = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
+}
+.user-info {
+  display: flex;
+  align-items: center;
+}
+.el-dropdown-link {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #333;
+}
+.username {
+  margin-left: 8px;
+  font-size: 14px;
 }
 .breadcrumb {
   font-size: 16px;
