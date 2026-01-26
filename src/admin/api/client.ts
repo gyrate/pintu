@@ -2,10 +2,18 @@ const API_BASE = '/api';
 
 export async function request(endpoint: string, options: RequestInit = {}) {
   const url = `${API_BASE}${endpoint}`;
-  const headers = {
+  
+  // 从 localStorage 获取 token
+  const token = localStorage.getItem('pintu_admin_token');
+  
+  const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
+
+  if (token) {
+    (headers as any)['Authorization'] = `Bearer ${token}`;
+  }
 
   const response = await fetch(url, {
     ...options,

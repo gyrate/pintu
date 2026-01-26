@@ -6,6 +6,7 @@ import taskRoutes from './routes/tasks.js';
 import imageRoutes from './routes/images.js';
 import userRoutes from './routes/users.js';
 import dashboardRoutes from './routes/dashboard.js';
+import { authenticateToken } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -16,11 +17,13 @@ app.use(express.json({ limit: '50mb' })); // 增加限制以上传大图
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // 路由
-app.use('/api/auth', authRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/images', imageRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/auth', authRoutes); // 登录接口不需要验证
+
+// 需要验证的接口
+app.use('/api/tasks', authenticateToken, taskRoutes);
+app.use('/api/images', authenticateToken, imageRoutes);
+app.use('/api/users', authenticateToken, userRoutes);
+app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

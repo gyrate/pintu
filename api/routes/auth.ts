@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../config/supabase.js';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
 
@@ -114,8 +115,32 @@ router.post('/login', async (req, res) => {
     }
 
     // 返回用户信息
+    let token = 'mock-jwt-token-' + user.id;
+
+    if (process.env.SUPABASE_JWT_SECRET) {
+        token = jwt.sign(
+            {
+                aud: 'authenticated',
+                role: 'authenticated',
+                sub: user.id,
+                app_metadata: {
+                    roles: user.roles || ['user'],
+                    provider: 'email'
+                },
+                user_metadata: {
+                    phone: user.phone,
+                    nickname: user.nickname
+                }
+            },
+            process.env.SUPABASE_JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+    } else {
+        console.warn('SUPABASE_JWT_SECRET is not set, using mock token');
+    }
+
     res.json({
-      token: 'mock-jwt-token-' + user.id, // 暂时返回 mock token
+      token,
       user
     });
 
