@@ -89,6 +89,7 @@ router.post('/login', async (req, res) => {
                 phone,
                 nickname: `User${phone.slice(-4)}`,
                 avatar_url: 'https://via.placeholder.com/150',
+                roles: ['user'], // 默认角色
                 created_at: new Date().toISOString()
             };
         }
@@ -96,6 +97,14 @@ router.post('/login', async (req, res) => {
 
     // 记录登录日志 (如果用户已存在且是数据库模式)
     if (user && !user.id.startsWith('mock-') && !dbError) {
+        // 权限检查：只有包含 'admin' 字符串的角色才能登录后台
+        const roles = user.roles || ['user']; // 默认角色
+        const hasAdminAccess = roles.some((role: string) => role.includes('admin') || role.includes('Admin'));
+        
+        if (!hasAdminAccess) {
+             return res.status(403).json({ error: 'Access denied. Admin role required.' });
+        }
+
         try {
             await supabaseAdmin.from('login_logs').insert({ user_id: user.id });
         } catch (logError) {

@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { api } from '../api/client';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useUserStore } from '../stores/user';
+
+const userStore = useUserStore();
+const isSuperAdmin = computed(() => {
+    // 允许 superAdmin   编辑角色
+    const roles = userStore.user?.roles || [];
+    return roles.includes('superAdmin');
+});
 
 const users = ref([]);
 const loading = ref(false);
@@ -20,6 +28,7 @@ const form = reactive({
   phone: '',
   nickname: '',
   password: '', // 仅新增时有效
+  roles: [] as string[],
 });
 
 const rules = {
@@ -59,6 +68,7 @@ const handleAdd = () => {
   form.phone = '';
   form.nickname = '';
   form.password = '';
+  form.roles = ['user'];
   dialogVisible.value = true;
 };
 
@@ -69,6 +79,7 @@ const handleEdit = (row: any) => {
   form.phone = row.phone;
   form.nickname = row.nickname;
   form.password = ''; // 编辑时不回显密码
+  form.roles = row.roles || ['user'];
   dialogVisible.value = true;
 };
 
@@ -95,6 +106,7 @@ const handleSubmit = async () => {
           await api.updateUser(form.id, {
             phone: form.phone,
             nickname: form.nickname,
+            roles: form.roles,
           });
           ElMessage.success('更新成功');
         } else {
@@ -139,7 +151,7 @@ onMounted(loadUsers);
 
 <template>
   <el-card>
-    <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 20px;" v-if="isSuperAdmin">
       <el-button type="primary" @click="handleAdd">新增用户</el-button>
     </div>
     <el-table :data="users" v-loading="loading" style="width: 100%">
@@ -150,13 +162,26 @@ onMounted(loadUsers);
         </template>
       </el-table-column>
       <el-table-column prop="nickname" label="昵称" width="120" />
+      <el-table-column label="角色" min-width="150">
+        <template #default="scope">
+          <el-tag
+            v-for="role in (scope.row.roles || ['user'])"
+            :key="role"
+            :type="role === 'superAdmin' ? 'danger' : (role === 'admin' ? 'warning' : 'info')"
+            style="margin-right: 4px;"
+            size="small"
+          >
+            {{ role }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="phone" label="手机号" width="120" />
       <el-table-column prop="created_at" label="注册时间">
         <template #default="scope">
           {{ new Date(scope.row.created_at).toLocaleString() }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="250" fixed="right">
+      <el-table-column label="操作" width="250" fixed="right" v-if="isSuperAdmin">
         <template #default="scope">
           <el-button link type="primary" size="small" @click="handleEdit(scope.row)">
             编辑
@@ -196,6 +221,12 @@ onMounted(loadUsers);
         </el-form-item>
         <el-form-item label="昵称" prop="nickname">
           <el-input v-model="form.nickname" placeholder="请输入昵称" />
+        </el-form-item>
+        <el-form-item v-if="isSuperAdmin" label="角色">
+          <el-checkbox-group v-model="form.roles">
+            <el-checkbox label="user">普通用户</el-checkbox>
+            <el-checkbox label="admin">管理员</el-checkbox>
+          </el-checkbox-group>
         </el-form-item>
         <el-form-item v-if="!isEdit" label="密码" prop="password">
           <el-input v-model="form.password" type="password" placeholder="请输入初始密码 (至少6位)" show-password />

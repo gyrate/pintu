@@ -59,7 +59,7 @@ router.get('/', async (req, res) => {
 // 创建用户
 router.post('/', async (req, res) => {
   try {
-    const { phone, nickname, password } = req.body;
+    const { phone, nickname, password, roles } = req.body;
     if (!phone || !nickname) {
         return res.status(400).json({ error: 'Phone and nickname are required' });
     }
@@ -67,7 +67,8 @@ router.post('/', async (req, res) => {
     const newUser: any = {
         phone,
         nickname,
-        avatar_url: 'https://via.placeholder.com/150'
+        avatar_url: 'https://via.placeholder.com/150',
+        roles: roles || ['user']
     };
 
     if (password && password.length >= 6) {
@@ -92,11 +93,12 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { nickname, phone } = req.body;
+        const { nickname, phone, roles } = req.body;
         
         const updates: any = {};
         if (nickname) updates.nickname = nickname;
         if (phone) updates.phone = phone;
+        if (roles) updates.roles = roles;
 
         const { error } = await supabaseAdmin
             .from('users')
