@@ -56,7 +56,12 @@ export const api = {
     body: JSON.stringify({ phone, code, password, type })
   }),
   
-  getTasks: (userId: string) => request(`/tasks?userId=${userId}`),
+  getTasks: (userId: string, page = 1, pageSize = 10, search = '', sort = 'desc') => {
+    let url = `/tasks?userId=${userId}&page=${page}&pageSize=${pageSize}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (sort) url += `&sort=${sort}`;
+    return request(url);
+  },
   
   getTask: (id: string) => request(`/tasks/${id}`),
   

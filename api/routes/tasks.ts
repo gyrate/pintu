@@ -36,21 +36,31 @@ router.get('/results', async (req, res) => {
 // 获取任务列表
 router.get('/', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, search, sort } = req.query;
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 10;
     const start = (page - 1) * pageSize;
     const end = start + pageSize - 1;
+    const isAsc = sort === 'asc';
 
     let query = supabaseAdmin
         .from('tasks')
-        .select('*, user:users(nickname, phone)', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(start, end);
-    
+        .select('*, user:users(nickname, phone)', { count: 'exact' });
+
+    // 搜索
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    }
+
+    // 筛选用户
     if (userId) {
       query = query.eq('user_id', userId);
     }
+    
+    // 排序和分页
+    query = query
+        .order('created_at', { ascending: isAsc })
+        .range(start, end);
 
     const { data, error, count } = await query;
     if (error) throw error;
