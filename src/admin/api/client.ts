@@ -1,3 +1,5 @@
+import router from '../router';
+
 const API_BASE = '/api';
 
 export async function request(endpoint: string, options: RequestInit = {}) {
@@ -6,13 +8,13 @@ export async function request(endpoint: string, options: RequestInit = {}) {
   // 从 localStorage 获取 token
   const token = localStorage.getItem('pintu_admin_token');
   
-  const headers: HeadersInit = {
+  const headers: any = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
 
   if (token) {
-    (headers as any)['Authorization'] = `Bearer ${token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(url, {
@@ -20,7 +22,24 @@ export async function request(endpoint: string, options: RequestInit = {}) {
     headers,
   });
 
-  const data = await response.json();
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('pintu_admin_token');
+    localStorage.removeItem('pintu_admin_user');
+    router.push('/login');
+    throw new Error('Authentication required');
+  }
+
+  const text = await response.text();
+  let data;
+  try {
+      data = text ? JSON.parse(text) : {};
+  } catch (error) {
+      console.error('Failed to parse response as JSON:', text);
+      if (!response.ok) {
+          throw new Error(response.statusText || 'Network response was not ok');
+      }
+      throw new Error('Invalid JSON response');
+  }
 
   if (!response.ok) {
     throw new Error(data.error || 'Network response was not ok');
