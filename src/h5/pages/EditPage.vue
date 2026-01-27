@@ -174,7 +174,26 @@ const viewPreview = () => {
     </div>
 
     <div class="footer-action">
-      <van-button type="primary" block round @click="onExport">生成长图</van-button>
+      <div class="button-group">
+        <van-button 
+          v-if="task.status === 'completed'" 
+          plain 
+          type="primary" 
+          round 
+          class="flex-1"
+          @click="showPreview = true"
+        >
+          查看长图
+        </van-button>
+        <van-button 
+          type="primary" 
+          round 
+          class="flex-1"
+          @click="onExport"
+        >
+          {{ task.status === 'completed' ? '重新生成长图' : '生成长图' }}
+        </van-button>
+      </div>
     </div>
 
     <!-- Result Dialog -->
@@ -283,6 +302,15 @@ const viewPreview = () => {
   box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
   z-index: 99;
   box-sizing: border-box;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+}
+
+.flex-1 {
+  flex: 1;
 }
 
 .preview-content {
