@@ -42,42 +42,73 @@ const loadTask = async () => {
   }
 };
 
+const pendingFiles = ref<File[]>([]);
+
+const afterRead = async (file: any) => {
+  if (!file || !file.file) return;
+  
+  // 创建临时预览 URL
+  const tempUrl = URL.createObjectURL(file.file);
+  
+  images.value.push({
+    id: `temp-${Date.now()}`,
+    url: tempUrl,
+    isTemp: true,
+    file: file.file
+  });
+  
+  // 仅在本地状态更新，不立即触发保存/上传
+};
+
 const saveTask = async (silent = false) => {
   if (!silent) saving.value = true;
+  const toast = !silent ? showLoadingToast({ message: '保存中...', forbidClick: true }) : null;
+  
   try {
+    // 1. 先处理所有待上传的临时图片
+    const uploadPromises = images.value.map(async (img) => {
+      if (img.isTemp && img.file) {
+        try {
+          // 上传图片并获取真实数据
+          const uploadedImg = await api.uploadImage(img.file, taskId);
+          return uploadedImg; // 返回上传后的图片对象
+        } catch (e) {
+          console.error('Failed to upload image', e);
+          throw e;
+        }
+      }
+      return img; // 已有的图片直接返回
+    });
+
+    const processedImages = await Promise.all(uploadPromises);
+    images.value = processedImages; // 更新本地列表为真实数据
+
+    // 2. 更新任务信息（包含所有图片的关联）
     const imageIds = images.value.map(img => img.id);
     await api.updateTask(taskId, {
       name: task.value.name,
       direction: task.value.direction,
       images: imageIds
     });
-    if (!silent) showToast('保存成功');
+    
+    if (!silent) {
+      toast?.close();
+      showToast('保存成功');
+    }
   } catch (error: any) {
-    showToast(error.message || '保存失败');
+    if (!silent) {
+      toast?.close();
+      showToast(error.message || '保存失败');
+    }
+    throw error; // 抛出错误以便上层处理（如生成长图时中断）
   } finally {
     saving.value = false;
   }
 };
 
-const afterRead = async (file: any) => {
-  // file.file is the actual File object
-  if (!file || !file.file) return;
-
-  const toast = showLoadingToast({ message: '上传中...', forbidClick: true });
-  try {
-    const uploadedImage = await api.uploadImage(file.file, taskId);
-    images.value.push(uploadedImage);
-    await saveTask(true); // Auto save
-    toast.close();
-  } catch (error: any) {
-    toast.close();
-    showToast(error.message || '上传失败');
-  }
-};
-
 const deleteImage = async (index: number) => {
   images.value.splice(index, 1);
-  await saveTask(true);
+  // await saveTask(true); // 移除自动保存
 };
 
 const moveImage = (index: number, offset: number) => {
@@ -90,7 +121,7 @@ const moveImage = (index: number, offset: number) => {
   images.value[index] = images.value[newIndex];
   images.value[newIndex] = temp;
   
-  saveTask(true);
+  // saveTask(true); // 移除自动保存，等待用户手动点击保存或生成
 };
 
 const onExport = async () => {
@@ -139,7 +170,7 @@ const viewPreview = () => {
       <van-field v-model="task.name" label="任务名称" placeholder="请输入任务名称" />
       <div class="direction-setting">
         <span class="label">拼接方向</span>
-        <van-radio-group v-model="task.direction" direction="horizontal" @change="saveTask(true)">
+        <van-radio-group v-model="task.direction" direction="horizontal">
           <van-radio name="down">向下</van-radio>
           <van-radio name="right">向右</van-radio>
         </van-radio-group>
