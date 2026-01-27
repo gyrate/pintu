@@ -2,13 +2,17 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from './stores/user';
-import { DataAnalysis, User, List as ListIcon, Picture, Files } from '@element-plus/icons-vue';
+import { DataAnalysis, User, List as ListIcon, Picture, Files, Key } from '@element-plus/icons-vue';
 
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 
 const isLogin = computed(() => !!userStore.token);
+const isSuperAdmin = computed(() => {
+  const roles = userStore.user?.roles || [];
+  return roles.includes('superAdmin');
+});
 const activeMenu = computed(() => route.path);
 
 const handleLogout = () => {
@@ -56,6 +60,10 @@ const handleCommand = (command: string) => {
             <el-menu-item index="/results">
               <el-icon><Files /></el-icon>
               <span>生成结果</span>
+            </el-menu-item>
+            <el-menu-item index="/apikeys" v-if="isSuperAdmin">
+              <el-icon><Key /></el-icon>
+              <span>API Key 管理</span>
             </el-menu-item>
           </el-menu>
         </el-aside>

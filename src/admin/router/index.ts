@@ -41,6 +41,12 @@ const routes: RouteRecordRaw[] = [
     name: 'ResultList',
     component: () => import('../pages/ResultList.vue'),
     meta: { title: '生成结果' }
+  },
+  {
+    path: '/apikeys',
+    name: 'ApiKeyList',
+    component: () => import('../pages/ApiKeyList.vue'),
+    meta: { requiresAuth: true, title: 'API Key 管理' }
   }
 ];
 

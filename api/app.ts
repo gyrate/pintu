@@ -6,7 +6,9 @@ import taskRoutes from './routes/tasks.js';
 import imageRoutes from './routes/images.js';
 import userRoutes from './routes/users.js';
 import dashboardRoutes from './routes/dashboard.js';
+import openRoutes from './routes/open.js';
 import { authenticateToken } from './middleware/auth.js';
+import { authenticateApiKey } from './middleware/openAuth.js';
 
 dotenv.config();
 
@@ -18,6 +20,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // 路由
 app.use('/api/auth', authRoutes); // 登录接口不需要验证
+app.use('/api/open', authenticateApiKey, openRoutes); // 开放平台接口，使用 API Key 验证
 
 // 需要验证的接口
 app.use('/api/tasks', authenticateToken, taskRoutes);

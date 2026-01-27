@@ -93,12 +93,16 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { nickname, phone, roles } = req.body;
+        const { nickname, phone, roles, api_key } = req.body;
         
         const updates: any = {};
         if (nickname) updates.nickname = nickname;
         if (phone) updates.phone = phone;
         if (roles) updates.roles = roles;
+        if (api_key !== undefined) updates.api_key = api_key; // Allow clearing api_key with empty string or null
+
+        console.log(`[UpdateUser] ID: ${id}, Body:`, req.body);
+        console.log(`[UpdateUser] Updates object:`, updates);
 
         const { error } = await supabaseAdmin
             .from('users')

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼图开放平台 API 演示</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+        }
+        h1 { margin-top: 0; color: #333; }
+        .section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        .section:last-child { border-bottom: none; }
+        
+        .api-key-box {
+            background: #f0f9eb;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #e1f3d8;
+            color: #67c23a;
+            margin-bottom: 20px;
+            font-family: monospace;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            outline: none;
+            color: #fff;
+            background-color: #409eff;
+            border: none;
+            border-radius: 4px;
+            transition: .1s;
+        }
+        .btn:hover { background-color: #66b1ff; }
+        .btn:disabled { background-color: #a0cfff; cursor: not-allowed; }
+        .btn-success { background-color: #67c23a; }
+        .btn-success:hover { background-color: #85ce61; }
+
+        .file-input { margin-bottom: 10px; }
+        
+        .image-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .image-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .image-item .status {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 12px;
+            text-align: center;
+            padding: 2px 0;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .result-img {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        pre {
+            background: #f4f4f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>拼图 API 演示</h1>
+        
+        <div class="api-key-box">
+            当前使用的 Demo API Key: <strong>sk-r0z3io4kastv7w271uud</strong>
+        </div>
+
+        <div class="section">
+            <h3>1. 上传图片</h3>
+            <p>选择多张图片上传，上传成功后会自动添加到下方列表。</p>
+            <input type="file" id="fileInput" multiple accept="image/*" class="file-input">
+            <button class="btn" onclick="uploadFiles()">开始上传</button>
+            
+            <div id="imageList" class="image-list">
+                <!-- 图片预览区 -->
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. 生成长图</h3>
+            <p>将已上传的图片按顺序拼接。</p>
+            <div style="margin-bottom: 15px;">
+                <label>
+                    <input type="radio" name="direction" value="down" checked> 向下拼接
+                </label>
+                <label style="margin-left: 15px;">
+                    <input type="radio" name="direction" value="right"> 向右拼接
+                </label>
+            </div>
+            <button class="btn btn-success" id="stitchBtn" onclick="stitchImages()" disabled>生成长图</button>
+            
+            <div id="resultArea" class="result-box" style="display: none;">
+                <h4>生成结果：</h4>
+                <p><a id="resultLink" href="#" target="_blank">查看原图</a></p>
+                <img id="resultImg" class="result-img" src="">
+                <div style="text-align: left; margin-top: 10px;">
+                    <p>API 响应:</p>
+                    <pre id="apiResponse"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'sk-r0z3io4kastv7w271uud';
+        const API_BASE = '/api/open'; // 相对路径，假设 demo.html 部署在同一域名下
+        
+        // 存储已上传的图片 ID
+        let uploadedImageIds = [];
+
+        async function uploadFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('请先选择图片');
+                return;
+            }
+
+            const imageList = document.getElementById('imageList');
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // 创建预览元素
+                const div = document.createElement('div');
+                div.className = 'image-item';
+                div.innerHTML = `
+                    <img src="${URL.createObjectURL(file)}">
+                    <div class="status">上传中...</div>
+                `;
+                imageList.appendChild(div);
+
+                // 执行上传
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const res = await fetch(`${API_BASE}/upload`, {
+                        method: 'POST',
+                        headers: {
+                            'X-API-Key': API_KEY
+                        },
+                        body: formData
+                    });
+
+                    const data = await res.json();
+                    
+                    if (res.ok) {
+                        div.querySelector('.status').textContent = '已完成';
+                        div.querySelector('.status').style.background = 'rgba(103, 194, 58, 0.8)';
+                        uploadedImageIds.push(data.id);
+                        updateStitchButton();
+                    } else {
+                        div.querySelector('.status').textContent = '失败';
+                        div.querySelector('.status').style.background = 'rgba(245, 108, 108, 0.8)';
+                        console.error(data);
+                    }
+                } catch (err) {
+                    div.querySelector('.status').textContent = '错误';
+                    console.error(err);
+                }
+            }
+            
+            // 清空选择
+            fileInput.value = '';
+        }
+
+        function updateStitchButton() {
+            const btn = document.getElementById('stitchBtn');
+            btn.disabled = uploadedImageIds.length < 2;
+            if (btn.disabled) {
+                btn.textContent = '至少需要上传2张图片';
+            } else {
+                btn.textContent = '生成长图 (' + uploadedImageIds.length + '张)';
+            }
+        }
+
+        async function stitchImages() {
+            const direction = document.querySelector('input[name="direction"]:checked').value;
+            const resultArea = document.getElementById('resultArea');
+            const btn = document.getElementById('stitchBtn');
+            
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            resultArea.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/stitch`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        image_ids: uploadedImageIds,
+                        direction: direction
+                    })
+                });
+
+                const data = await res.json();
+                
+                resultArea.style.display = 'block';
+                document.getElementById('apiResponse').textContent = JSON.stringify(data, null, 2);
+
+                if (res.ok) {
+                    document.getElementById('resultImg').src = data.result_url;
+                    document.getElementById('resultLink').href = data.result_url;
+                } else {
+                    alert('生成失败: ' + data.error);
+                }
+
+            } catch (err) {
+                alert('请求错误: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                updateStitchButton();
+            }
+        }
+    </script>
+</body>
+</html>
