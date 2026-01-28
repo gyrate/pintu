@@ -128,29 +128,9 @@ router.post('/stitch', async (req, res) => {
     const { data: { publicUrl } } = supabaseAdmin.storage.from(BUCKET_NAME).getPublicUrl(fileName);
     const meta = await sharp(buffer).metadata();
 
-    // Save result to DB (images table) so it can be managed
-    const { data: savedImage, error: dbError } = await supabaseAdmin
-      .from('images')
-      .insert([
-        {
-          original_name: `stitched_${Date.now()}.png`,
-          storage_path: fileName,
-          width: meta.width || 0,
-          height: meta.height || 0,
-          file_size: buffer.length,
-          // You might want to add a flag or type to distinguish generated images if needed
-        }
-      ])
-      .select()
-      .single();
-
-    if (dbError) {
-        console.error('Failed to save stitched image to DB:', dbError);
-        // We continue even if DB save fails, as the file is uploaded
-    }
-
     // Also save to 'tasks' table so it appears in "Generate Results" list
     // req.user is populated by authenticateApiKey middleware
+    let taskId;
     if ((req as any).user) {
         const userId = (req as any).user.id;
         const taskName = `API Stitch ${new Date().toLocaleString()}`;
@@ -174,6 +154,7 @@ router.post('/stitch', async (req, res) => {
         if (taskError) {
              console.error('Failed to create task record for API stitch:', taskError);
         } else if (newTask) {
+            taskId = newTask.id;
             // Create associations in task_images table
             const taskImages = image_ids.map((imgId: string, index: number) => ({
                 task_id: newTask.id,
@@ -192,7 +173,7 @@ router.post('/stitch', async (req, res) => {
     }
 
     res.json({
-      id: savedImage?.id, // Return ID if saved
+      task_id: taskId,
       result_url: publicUrl,
       width: meta.width,
       height: meta.height
