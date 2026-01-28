@@ -106,8 +106,25 @@
     <div class="container">
         <h1>拼图 API 演示</h1>
         
-        <div class="api-key-box">
-            当前使用的 Demo API Key: <strong>sk-r0z3io4kastv7w271uud</strong>
+        <div class="section">
+            <h3>0. 环境配置</h3>
+            <div style="margin-bottom: 15px;">
+                <label style="margin-right: 20px;">
+                    <input type="radio" name="env" value="local" checked onchange="updateApiBase()"> 
+                    本地调试 (相对路径 /api/open)
+                </label>
+                <label>
+                    <input type="radio" name="env" value="prod" onchange="updateApiBase()"> 
+                    生产环境 (https://traepintu8e1f.vercel.app/api/open)
+                </label>
+            </div>
+            <div class="api-key-box" style="margin-bottom: 0;">
+                <div style="margin-bottom: 10px;">当前 API Base: <strong id="currentApiBase">/api/open</strong></div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span>API Key:</span>
+                    <input type="text" id="apiKeyInput" value="sk-r0z3io4kastv7w271uud" style="flex: 1; padding: 5px; border: 1px solid #dcdfe6; border-radius: 4px; color: #67c23a; font-family: monospace;" onchange="updateApiKey()">
+                </div>
+            </div>
         </div>
 
         <div class="section">
@@ -147,9 +164,24 @@
     </div>
 
     <script>
-        const API_KEY = 'sk-r0z3io4kastv7w271uud';
-        const API_BASE = '/api/open'; // 相对路径，假设 demo.html 部署在同一域名下
+        let API_KEY = 'sk-r0z3io4kastv7w271uud';
+        let API_BASE = '/api/open'; // 默认本地
         
+        function updateApiKey() {
+            const input = document.getElementById('apiKeyInput');
+            API_KEY = input.value.trim();
+        }
+
+        function updateApiBase() {
+            const env = document.querySelector('input[name="env"]:checked').value;
+            if (env === 'prod') {
+                API_BASE = 'https://traepintu8e1f.vercel.app/api/open';
+            } else {
+                API_BASE = '/api/open';
+            }
+            document.getElementById('currentApiBase').textContent = API_BASE;
+        }
+
         // 存储已上传的图片 ID
         let uploadedImageIds = [];
 
