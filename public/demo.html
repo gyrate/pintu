@@ -149,7 +149,17 @@
                     <input type="radio" name="direction" value="right"> 向右拼接
                 </label>
             </div>
-            <button class="btn btn-success" id="stitchBtn" onclick="stitchImages()" disabled>生成长图</button>
+            
+            <div style="margin-bottom: 15px;">
+                <h4>方式一：使用已上传图片 (image_ids)</h4>
+                <button class="btn btn-success" id="stitchBtn" onclick="stitchImages()" disabled>生成长图</button>
+            </div>
+
+            <div style="margin-bottom: 15px; border-top: 1px dashed #eee; padding-top: 15px;">
+                <h4>方式二：直接使用网络图片 URL (image_urls)</h4>
+                <textarea id="urlInput" rows="3" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #dcdfe6; border-radius: 4px;" placeholder="输入图片URL，每行一个"></textarea>
+                <button class="btn" onclick="stitchUrls()">使用 URL 生成长图</button>
+            </div>
             
             <div id="resultArea" class="result-box" style="display: none;">
                 <h4>生成结果：</h4>
@@ -255,11 +265,36 @@
 
         async function stitchImages() {
             const direction = document.querySelector('input[name="direction"]:checked').value;
-            const resultArea = document.getElementById('resultArea');
-            const btn = document.getElementById('stitchBtn');
+            await doStitch({
+                image_ids: uploadedImageIds,
+                direction: direction
+            }, 'stitchBtn');
+        }
+
+        async function stitchUrls() {
+            const direction = document.querySelector('input[name="direction"]:checked').value;
+            const text = document.getElementById('urlInput').value;
+            const urls = text.split('\n').map(u => u.trim()).filter(u => u);
             
-            btn.disabled = true;
-            btn.textContent = '生成中...';
+            if (urls.length < 2) {
+                alert('请至少输入2个有效的图片 URL');
+                return;
+            }
+
+            await doStitch({
+                image_urls: urls,
+                direction: direction
+            }); // 这里没传 btnId，简单处理
+        }
+
+        async function doStitch(payload, btnId) {
+            const resultArea = document.getElementById('resultArea');
+            const btn = btnId ? document.getElementById(btnId) : null;
+            
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '生成中...';
+            }
             resultArea.style.display = 'none';
 
             try {
@@ -269,10 +304,7 @@
                         'Content-Type': 'application/json',
                         'X-API-Key': API_KEY
                     },
-                    body: JSON.stringify({
-                        image_ids: uploadedImageIds,
-                        direction: direction
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await res.json();
@@ -290,8 +322,10 @@
             } catch (err) {
                 alert('请求错误: ' + err.message);
             } finally {
-                btn.disabled = false;
-                updateStitchButton();
+                if (btn) {
+                    btn.disabled = false;
+                    updateStitchButton();
+                }
             }
         }
     </script>
