@@ -110,16 +110,19 @@
             <h3>0. 环境配置</h3>
             <div style="margin-bottom: 15px;">
                 <label style="margin-right: 20px;">
-                    <input type="radio" name="env" value="local" checked onchange="updateApiBase()"> 
-                    本地调试 (相对路径 /api/open)
+                    <input type="radio" name="env" value="local" checked onchange="setEnv('local')"> 
+                    本地调试
                 </label>
                 <label>
-                    <input type="radio" name="env" value="prod" onchange="updateApiBase()"> 
-                    生产环境 (https://traepintu8e1f.vercel.app/api/open)
+                    <input type="radio" name="env" value="prod" onchange="setEnv('prod')"> 
+                    生产环境 (gyrate.top)
                 </label>
             </div>
             <div class="api-key-box" style="margin-bottom: 0;">
-                <div style="margin-bottom: 10px;">当前 API Base: <strong id="currentApiBase">/api/open</strong></div>
+                <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                    <span>API Base:</span>
+                    <input type="text" id="apiBaseInput" value="/api/open" style="flex: 1; padding: 5px; border: 1px solid #dcdfe6; border-radius: 4px; font-family: monospace;" onchange="updateApiBase()">
+                </div>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span>API Key:</span>
                     <input type="text" id="apiKeyInput" value="sk-r0z3io4kastv7w271uud" style="flex: 1; padding: 5px; border: 1px solid #dcdfe6; border-radius: 4px; color: #67c23a; font-family: monospace;" onchange="updateApiKey()">
@@ -182,14 +185,19 @@
             API_KEY = input.value.trim();
         }
 
-        function updateApiBase() {
-            const env = document.querySelector('input[name="env"]:checked').value;
-            if (env === 'prod') {
-                API_BASE = 'https://traepintu8e1f.vercel.app/api/open';
+        function setEnv(type) {
+            const input = document.getElementById('apiBaseInput');
+            if (type === 'prod') {
+                input.value = 'https://gyrate.top/api/open';
             } else {
-                API_BASE = '/api/open';
+                input.value = '/api/open';
             }
-            document.getElementById('currentApiBase').textContent = API_BASE;
+            updateApiBase();
+        }
+
+        function updateApiBase() {
+            const input = document.getElementById('apiBaseInput');
+            API_BASE = input.value.trim();
         }
 
         // 存储已上传的图片 ID

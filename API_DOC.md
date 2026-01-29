@@ -2,7 +2,7 @@
 
 本文档描述了如何通过 API 调用拼图服务的核心功能：上传图片和生成长图。
 
-*   **Base URL**: `https://traepintu8e1f.vercel.app/api/open`
+*   **Base URL**: `https://gyrate.top/api/open`
 
 ## 1. 鉴权 (Authentication)
 
