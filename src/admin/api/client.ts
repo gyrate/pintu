@@ -55,14 +55,20 @@ export const api = {
   }),
   
   // Admin APIs (Assuming admin can see all tasks/users)
-  getTasks: (userId?: string, page: number = 1, pageSize: number = 10) => {
+  getTasks: (userId?: string, page: number = 1, pageSize: number = 10, search?: string) => {
     let url = `/tasks?page=${page}&pageSize=${pageSize}`;
     if (userId) url += `&userId=${userId}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
     return request(url);
   },
   
   deleteTask: (id: string) => request(`/tasks/${id}`, {
     method: 'DELETE'
+  }),
+
+  batchDeleteTasks: (ids: string[]) => request('/tasks/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ ids })
   }),
 
   getUsers: (page: number = 1, pageSize: number = 10) => request(`/users?page=${page}&pageSize=${pageSize}`),
@@ -75,10 +81,22 @@ export const api = {
     body: JSON.stringify({ password })
   }),
 
-  getImages: (page: number = 1, pageSize: number = 10) => request(`/images?page=${page}&pageSize=${pageSize}`),
+  getImages: (page: number = 1, pageSize: number = 10, search?: string) => {
+    let url = `/images?page=${page}&pageSize=${pageSize}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    return request(url);
+  },
   deleteImage: (id: string) => request(`/images/${id}`, { method: 'DELETE' }),
+  batchDeleteImages: (ids: string[]) => request('/images/batch-delete', {
+    method: 'POST',
+    body: JSON.stringify({ ids })
+  }),
 
-  getResults: (page: number = 1, pageSize: number = 10) => request(`/tasks/results?page=${page}&pageSize=${pageSize}`),
+  getResults: (page: number = 1, pageSize: number = 10, search?: string) => {
+    let url = `/tasks/results?page=${page}&pageSize=${pageSize}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    return request(url);
+  },
 
   getDashboardStats: () => request('/dashboard/stats'),
 };

@@ -8,16 +8,23 @@ const BUCKET_NAME = 'pintu-images';
 // 获取所有生成结果（已完成的任务）
 router.get('/results', async (req, res) => {
     try {
+        const { search } = req.query;
         const page = parseInt(req.query.page as string) || 1;
         const pageSize = parseInt(req.query.pageSize as string) || 10;
         const start = (page - 1) * pageSize;
         const end = start + pageSize - 1;
 
-        const { data: tasks, error, count } = await supabaseAdmin
+        let query = supabaseAdmin
             .from('tasks')
             .select('*', { count: 'exact' })
             .eq('status', 'completed')
-            .not('export_url', 'is', null)
+            .not('export_url', 'is', null);
+
+        if (search) {
+            query = query.ilike('name', `%${search}%`);
+        }
+
+        const { data: tasks, error, count } = await query
             .order('updated_at', { ascending: false })
             .range(start, end);
         
@@ -258,6 +265,27 @@ router.post('/:id/export', async (req, res) => {
 
     } catch (error: any) {
         console.error('Export error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 批量删除任务
+router.post('/batch-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Invalid ids provided' });
+        }
+
+        const { error } = await supabaseAdmin
+            .from('tasks')
+            .delete()
+            .in('id', ids);
+
+        if (error) throw error;
+
+        res.json({ success: true });
+    } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
 });

@@ -5,6 +5,8 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 
 const tasks = ref([]);
 const loading = ref(false);
+const searchQuery = ref('');
+const selectedIds = ref<string[]>([]);
 const pagination = reactive({
   currentPage: 1,
   pageSize: 10,
@@ -14,7 +16,7 @@ const pagination = reactive({
 const loadTasks = async () => {
   loading.value = true;
   try {
-    const data = await api.getTasks(undefined, pagination.currentPage, pagination.pageSize);
+    const data = await api.getTasks(undefined, pagination.currentPage, pagination.pageSize, searchQuery.value);
     tasks.value = data.list;
     pagination.total = data.total;
   } catch (error: any) {
@@ -22,6 +24,32 @@ const loadTasks = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const handleSearch = () => {
+  pagination.currentPage = 1;
+  loadTasks();
+};
+
+const handleSelectionChange = (selection: any[]) => {
+  selectedIds.value = selection.map(item => item.id);
+};
+
+const handleBatchDelete = () => {
+  if (selectedIds.value.length === 0) return;
+  
+  ElMessageBox.confirm(`确定要删除选中的 ${selectedIds.value.length} 个任务吗？`, '警告', {
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await api.batchDeleteTasks(selectedIds.value);
+      ElMessage.success('批量删除成功');
+      loadTasks();
+      selectedIds.value = [];
+    } catch (error: any) {
+      ElMessage.error('批量删除失败');
+    }
+  });
 };
 
 const handlePageChange = (page: number) => {
@@ -54,7 +82,36 @@ onMounted(loadTasks);
 
 <template>
   <el-card>
-    <el-table :data="tasks" v-loading="loading" style="width: 100%">
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between;">
+      <div style="display: flex; gap: 10px;">
+        <el-input 
+          v-model="searchQuery" 
+          placeholder="搜索任务名称" 
+          style="width: 200px" 
+          clearable 
+          @clear="handleSearch"
+          @keyup.enter="handleSearch"
+        />
+        <el-button type="primary" @click="handleSearch">查询</el-button>
+      </div>
+      <div>
+        <el-button 
+          type="danger" 
+          :disabled="selectedIds.length === 0" 
+          @click="handleBatchDelete"
+        >
+          批量删除
+        </el-button>
+      </div>
+    </div>
+
+    <el-table 
+      :data="tasks" 
+      v-loading="loading" 
+      style="width: 100%"
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="55" />
       <el-table-column prop="name" label="任务名称" min-width="150" show-overflow-tooltip />
       <el-table-column label="所属用户" min-width="150" show-overflow-tooltip>
         <template #default="scope">
