@@ -1,0 +1,161 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "拼图开放平台 API",
+    "description": "提供图片上传和长图拼接功能。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://gyrate.top/api/open"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    },
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/upload": {
+      "post": {
+        "operationId": "uploadImage",
+        "summary": "上传图片",
+        "description": "将本地图片上传至服务器，获取图片的唯一 ID 和 URL。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "图片文件 (支持 jpg, png, webp 等)"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "图片 ID"
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "图片 URL"
+                    },
+                    "width": {
+                      "type": "integer",
+                      "description": "图片宽度"
+                    },
+                    "height": {
+                      "type": "integer",
+                      "description": "图片高度"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stitch": {
+      "post": {
+        "operationId": "stitchImages",
+        "summary": "拼接长图",
+        "description": "将多张已上传的图片或网络图片拼接成一张长图。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "图片 ID 数组 (来源于上传接口的返回)，按数组顺序拼接。与 image_urls 二选一"
+                  },
+                  "image_urls": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "图片 URL 数组，支持直接拼接网络图片。与 image_ids 二选一"
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "down",
+                      "right"
+                    ],
+                    "default": "down",
+                    "description": "拼接方向"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "拼接成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result_url": {
+                      "type": "string",
+                      "description": "拼接结果图片 URL"
+                    },
+                    "width": {
+                      "type": "integer",
+                      "description": "结果图片宽度"
+                    },
+                    "height": {
+                      "type": "integer",
+                      "description": "结果图片高度"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
