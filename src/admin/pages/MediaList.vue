@@ -9,8 +9,6 @@ const loading = ref(false);
 const searchQuery = ref('');
 const selectedIds = ref<string[]>([]);
 const viewMode = ref<'grid' | 'table'>('grid');
-const previewVisible = ref(false);
-const previewUrl = ref('');
 const pagination = reactive({
   currentPage: 1,
   pageSize: 20, // 图片默认每页多展示一些
@@ -92,11 +90,6 @@ const handleDelete = async (id: string) => {
   }
 };
 
-const handlePreview = (url: string) => {
-  previewUrl.value = url;
-  previewVisible.value = true;
-};
-
 onMounted(loadImages);
 </script>
 
@@ -145,7 +138,8 @@ onMounted(loadImages);
                     :src="img.url" 
                     fit="cover" 
                     class="image-thumb"
-                    @click="handlePreview(img.url)"
+                    :preview-src-list="[img.url]"
+                    preview-teleported
                 />
                 <div class="image-info">
                     <div class="image-name" :title="img.original_name">{{ img.original_name }}</div>
@@ -209,13 +203,6 @@ onMounted(loadImages);
         @current-change="handlePageChange"
       />
     </div>
-
-    <!-- Preview Dialog -->
-    <el-dialog v-model="previewVisible" title="图片预览" width="80%" top="5vh">
-        <div style="text-align: center;">
-            <img :src="previewUrl" style="max-width: 100%; max-height: 80vh;" />
-        </div>
-    </el-dialog>
   </el-card>
 </template>
 
