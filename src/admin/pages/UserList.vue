@@ -3,6 +3,7 @@ import { ref, reactive, onMounted, computed } from 'vue';
 import { api } from '../api/client';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useUserStore } from '../stores/user';
+import SHA256 from 'crypto-js/sha256';
 
 const userStore = useUserStore();
 const isSuperAdmin = computed(() => {
@@ -110,10 +111,12 @@ const handleSubmit = async () => {
           });
           ElMessage.success('更新成功');
         } else {
+          // 创建用户时，密码也需要加密
+          const encryptedPassword = SHA256(form.password).toString();
           await api.createUser({
             phone: form.phone,
             nickname: form.nickname,
-            password: form.password,
+            password: encryptedPassword,
           });
           ElMessage.success('创建成功');
         }
@@ -136,7 +139,9 @@ const handleResetPassword = async (user: any) => {
     });
 
     if (password) {
-        await api.resetPassword(user.id, password);
+        // 重置密码时，对密码进行加密
+        const encryptedPassword = SHA256(password).toString();
+        await api.resetPassword(user.id, encryptedPassword);
         ElMessage.success('密码重置成功');
     }
   } catch (error: any) {

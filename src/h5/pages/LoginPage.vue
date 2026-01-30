@@ -3,14 +3,13 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
 import { api } from '../api/client';
-import { showToast } from 'vant';
+import { showToast, showDialog } from 'vant';
+import SHA256 from 'crypto-js/sha256';
 
 const router = useRouter();
 const userStore = useUserStore();
 
-const activeTab = ref(0); // 0: code, 1: password
 const phone = ref('');
-const code = ref('');
 const password = ref('');
 const loading = ref(false);
 
@@ -20,25 +19,23 @@ const onLogin = async () => {
     return;
   }
   
-  const type = activeTab.value === 0 ? 'code' : 'password';
-
-  if (type === 'code' && !code.value) {
-    showToast('请输入验证码');
-    return;
-  }
-  if (type === 'password' && !password.value) {
+  if (!password.value) {
     showToast('请输入密码');
     return;
   }
 
   loading.value = true;
   try {
-    const data = await api.login(phone.value, code.value, password.value, type);
+    const encryptedPassword = SHA256(password.value).toString();
+    const data = await api.login(phone.value, '', encryptedPassword, 'password');
     userStore.login(data.user, data.token);
     showToast('登录成功');
     router.replace('/');
   } catch (error: any) {
-    showToast(error.message || '登录失败');
+    showDialog({
+      title: '登录失败',
+      message: error.message || '请检查手机号或密码是否正确',
+    });
   } finally {
     loading.value = false;
   }
@@ -52,13 +49,6 @@ const onLogin = async () => {
       <p>记录生活，拼接美好</p>
     </div>
 
-    <div style="margin: 16px 16px 0;">
-        <van-tabs v-model:active="activeTab" type="card">
-            <van-tab title="验证码登录"></van-tab>
-            <van-tab title="密码登录"></van-tab>
-        </van-tabs>
-    </div>
-
     <van-form @submit="onLogin" style="margin-top: 20px;">
       <van-cell-group inset>
         <van-field
@@ -69,15 +59,6 @@ const onLogin = async () => {
           :rules="[{ required: true, message: '请填写手机号' }]"
         />
         <van-field
-          v-if="activeTab === 0"
-          v-model="code"
-          name="code"
-          label="验证码"
-          placeholder="任意验证码 (如 123456)"
-          :rules="[{ required: true, message: '请填写验证码' }]"
-        />
-        <van-field
-          v-if="activeTab === 1"
           v-model="password"
           type="password"
           name="password"
