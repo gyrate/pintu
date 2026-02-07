@@ -236,10 +236,10 @@ router.post('/:id/export', async (req, res) => {
         const buffer = await stitchImages(images, task.direction as 'down' | 'right');
 
         // 3. 上传结果
-        const fileName = `exports/${id}_${Date.now()}.png`;
+        const fileName = `exports/${id}_${Date.now()}.jpg`;
         const { error: uploadError } = await supabaseAdmin.storage
             .from(BUCKET_NAME)
-            .upload(fileName, buffer, { contentType: 'image/png', upsert: true });
+            .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true });
         
         if (uploadError) throw uploadError;
 

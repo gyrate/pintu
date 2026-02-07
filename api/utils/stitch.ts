@@ -97,7 +97,7 @@ export async function stitchImages(images: ImageItem[], direction: 'down' | 'rig
     }
   })
   .composite(processedImages)
-  .png() // 导出为 PNG
+  .jpeg({ quality: 80, mozjpeg: true }) // 导出为 JPEG 以减小体积
   .toBuffer();
 
   return result;

@@ -118,10 +118,10 @@ router.post('/stitch', async (req, res) => {
     const buffer = await stitchImages(sortedImages, direction);
 
     // Upload Result
-    const fileName = `exports/open_api_${Date.now()}.png`;
+    const fileName = `exports/open_api_${Date.now()}.jpg`;
     const { error: uploadError } = await supabaseAdmin.storage
         .from(BUCKET_NAME)
-        .upload(fileName, buffer, { contentType: 'image/png', upsert: true });
+        .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true });
     
     if (uploadError) throw uploadError;
 
@@ -133,7 +133,7 @@ router.post('/stitch', async (req, res) => {
       .from('images')
       .insert([
         {
-          original_name: `stitched_${Date.now()}.png`,
+          original_name: `stitched_${Date.now()}.jpg`,
           storage_path: fileName,
           width: meta.width || 0,
           height: meta.height || 0,
