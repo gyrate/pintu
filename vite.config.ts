@@ -47,6 +47,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // 允许内网 IP 访问
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3001',

@@ -6,9 +6,10 @@ import app from './app.js';
 /**
  * start server with port
  */
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
-const server = app.listen(PORT, () => {
+// 监听 0.0.0.0 以支持内网访问
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server ready on port ${PORT}`);
 });
 
