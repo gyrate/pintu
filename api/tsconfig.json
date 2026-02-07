@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "target": "ESNext",
+    "outDir": "../dist-api",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["../src/*"]
+    },
+    "types": ["node", "express"]
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["../src"]
+}

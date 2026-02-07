@@ -4,8 +4,10 @@ import { supabaseAdmin } from '../config/supabase.js';
 import path from 'path';
 import sharp from 'sharp';
 import { stitchImages } from '../utils/stitch.js';
+import { authenticateApiKey } from '../middleware/auth.js';
 
 const router = Router();
+router.use(authenticateApiKey);
 const upload = multer({ storage: multer.memoryStorage() });
 const BUCKET_NAME = 'pintu-images';
 
