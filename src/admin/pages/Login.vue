@@ -3,32 +3,40 @@ import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../stores/user';
 import { api } from '../api/client';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import SHA256 from 'crypto-js/sha256';
 
 const router = useRouter();
 const userStore = useUserStore();
 
 const form = reactive({
   phone: '',
-  code: ''
+  password: ''
 });
 
 const loading = ref(false);
 
 const onLogin = async () => {
-  if (!form.phone || !form.code) {
-    ElMessage.warning('请输入手机号和验证码');
+  if (!form.phone || !form.password) {
+    ElMessage.warning('请输入手机号和密码');
     return;
   }
 
   loading.value = true;
   try {
-    const data = await api.login(form.phone, form.code);
+    // 使用 SHA256 对密码进行加密
+    const encryptedPassword = SHA256(form.password).toString();
+    
+    // 调用登录接口，传递加密后的密码
+    const data = await api.login(form.phone, '', encryptedPassword, 'password');
     userStore.login(data.user, data.token);
     ElMessage.success('登录成功');
     router.replace('/');
   } catch (error: any) {
-    ElMessage.error(error.message || '登录失败');
+    ElMessageBox.alert(error.message || '登录失败', '登录错误', {
+      confirmButtonText: '确定',
+      type: 'error',
+    });
   } finally {
     loading.value = false;
   }
@@ -46,7 +54,7 @@ const onLogin = async () => {
           <el-input v-model="form.phone" placeholder="手机号" prefix-icon="Iphone" />
         </el-form-item>
         <el-form-item>
-          <el-input v-model="form.code" type="password" placeholder="验证码 (任意)" prefix-icon="Key" @keyup.enter="onLogin" />
+          <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Key" @keyup.enter="onLogin" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="loading" class="submit-btn" @click="onLogin">登录</el-button>

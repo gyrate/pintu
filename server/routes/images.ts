@@ -34,14 +34,21 @@ ensureBucket().catch(e => console.warn('Bucket check skipped:', e.message));
 // 获取图片列表
 router.get('/', async (req, res) => {
     try {
+        const { search } = req.query;
         const page = parseInt(req.query.page as string) || 1;
         const pageSize = parseInt(req.query.pageSize as string) || 10;
         const start = (page - 1) * pageSize;
         const end = start + pageSize - 1;
 
-        const { data: images, error, count } = await supabaseAdmin
+        let query = supabaseAdmin
             .from('images')
-            .select('*', { count: 'exact' })
+            .select('*', { count: 'exact' });
+
+        if (search) {
+            query = query.ilike('original_name', `%${search}%`);
+        }
+
+        const { data: images, error, count } = await query
             .order('created_at', { ascending: false })
             .range(start, end);
         
@@ -223,6 +230,40 @@ router.delete('/:id', async (req, res) => {
 
         // 3. 删除数据库记录
         const { error } = await supabaseAdmin.from('images').delete().eq('id', id);
+        if (error) throw error;
+
+        res.json({ success: true });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 批量删除图片
+router.post('/batch-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Invalid ids provided' });
+        }
+
+        // 1. 获取要删除的图片信息（为了拿到 storage_path）
+        const { data: images } = await supabaseAdmin
+            .from('images')
+            .select('storage_path')
+            .in('id', ids);
+
+        if (images && images.length > 0) {
+            // 2. 批量删除 Storage 文件
+            const paths = images.map(img => img.storage_path);
+            await supabaseAdmin.storage.from(BUCKET_NAME).remove(paths);
+        }
+
+        // 3. 批量删除数据库记录
+        const { error } = await supabaseAdmin
+            .from('images')
+            .delete()
+            .in('id', ids);
+
         if (error) throw error;
 
         res.json({ success: true });

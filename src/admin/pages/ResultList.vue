@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue';
 import { api } from '../api/client';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 const results = ref([]);
 const loading = ref(false);
+const searchQuery = ref('');
+const selectedIds = ref<string[]>([]);
 const pagination = reactive({
   currentPage: 1,
   pageSize: 10,
@@ -14,7 +16,7 @@ const pagination = reactive({
 const loadResults = async () => {
   loading.value = true;
   try {
-    const data = await api.getResults(pagination.currentPage, pagination.pageSize);
+    const data = await api.getResults(pagination.currentPage, pagination.pageSize, searchQuery.value);
     results.value = data.list;
     pagination.total = data.total;
   } catch (error: any) {
@@ -22,6 +24,33 @@ const loadResults = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const handleSearch = () => {
+  pagination.currentPage = 1;
+  loadResults();
+};
+
+const handleSelectionChange = (selection: any[]) => {
+  selectedIds.value = selection.map(item => item.id);
+};
+
+const handleBatchDelete = () => {
+  if (selectedIds.value.length === 0) return;
+  
+  ElMessageBox.confirm(`确定要删除选中的 ${selectedIds.value.length} 条生成记录吗？`, '警告', {
+    type: 'warning'
+  }).then(async () => {
+    try {
+      // 结果也是 Task，所以调用 batchDeleteTasks
+      await api.batchDeleteTasks(selectedIds.value);
+      ElMessage.success('批量删除成功');
+      loadResults();
+      selectedIds.value = [];
+    } catch (error: any) {
+      ElMessage.error('批量删除失败');
+    }
+  });
 };
 
 const handlePageChange = (page: number) => {
@@ -50,10 +79,39 @@ onMounted(loadResults);
 
 <template>
   <el-card>
-    <div slot="header" class="clearfix">
-      <span>生成结果管理</span>
+    <div slot="header" class="clearfix" style="margin-bottom: 20px;">
+      <div style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">生成结果管理</div>
+      <div style="display: flex; justify-content: space-between;">
+        <div style="display: flex; gap: 10px;">
+          <el-input 
+            v-model="searchQuery" 
+            placeholder="搜索任务名称" 
+            style="width: 200px" 
+            clearable 
+            @clear="handleSearch"
+            @keyup.enter="handleSearch"
+          />
+          <el-button type="primary" @click="handleSearch">查询</el-button>
+        </div>
+        <div>
+          <el-button 
+            type="danger" 
+            :disabled="selectedIds.length === 0" 
+            @click="handleBatchDelete"
+          >
+            批量删除
+          </el-button>
+        </div>
+      </div>
     </div>
-    <el-table :data="results" v-loading="loading" style="width: 100%">
+
+    <el-table 
+      :data="results" 
+      v-loading="loading" 
+      style="width: 100%"
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="55" />
       <el-table-column label="生成图片" width="150">
         <template #default="scope">
           <el-image 

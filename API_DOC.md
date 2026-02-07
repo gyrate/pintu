@@ -2,6 +2,8 @@
 
 本文档描述了如何通过 API 调用拼图服务的核心功能：上传图片和生成长图。
 
+*   **Base URL**: `https://gyrate.top/api/open`
+
 ## 1. 鉴权 (Authentication)
 
 所有接口均需要通过 `API Key` 进行鉴权。
@@ -15,7 +17,7 @@
     X-API-Key: <your_api_key>
     ```
 
-**测试用 Key**: `sk-demo-key-123456`
+**测试用 Key**: `sk-r0z3io4kastv7w271uud`
 
 ---
 
@@ -25,7 +27,7 @@
 
 将本地图片上传至服务器，获取图片的唯一 ID 和 URL。
 
-*   **URL**: `/api/open/upload`
+*   **URL**: `/upload`
 *   **Method**: `POST`
 *   **Content-Type**: `multipart/form-data`
 
@@ -52,7 +54,7 @@
 
 将多张已上传的图片拼接成一张长图。
 
-*   **URL**: `/api/open/stitch`
+*   **URL**: `/stitch`
 *   **Method**: `POST`
 *   **Content-Type**: `application/json`
 
@@ -60,7 +62,8 @@
 
 | 参数名 | 类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| `image_ids` | string[] | 是 | 图片 ID 数组 (来源于上传接口的返回)，按数组顺序拼接 |
+| `image_ids` | string[] | 选填 | 图片 ID 数组 (来源于上传接口的返回)，按数组顺序拼接。**与 `image_urls` 二选一** |
+| `image_urls` | string[] | 选填 | 图片 URL 数组，支持直接拼接网络图片。**与 `image_ids` 二选一** |
 | `direction` | string | 否 | 拼接方向，可选值: `"down"` (默认, 向下拼), `"right"` (向右拼) |
 
 #### 响应示例

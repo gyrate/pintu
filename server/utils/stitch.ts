@@ -4,9 +4,10 @@ import { supabaseAdmin } from '../config/supabase.js';
 const BUCKET_NAME = 'pintu-images';
 
 interface ImageItem {
-  storage_path: string;
-  width: number;
-  height: number;
+  storage_path?: string;
+  buffer?: Buffer; // 支持直接传入 buffer
+  width?: number;
+  height?: number;
 }
 
 export async function stitchImages(images: ImageItem[], direction: 'down' | 'right'): Promise<Buffer> {
@@ -14,15 +15,25 @@ export async function stitchImages(images: ImageItem[], direction: 'down' | 'rig
     throw new Error('No images to stitch');
   }
 
-  // 1. 下载所有图片数据
+  // 1. 获取所有图片数据 (Buffer)
   const imageBuffers = await Promise.all(
     images.map(async (img) => {
-      const { data, error } = await supabaseAdmin.storage
-        .from(BUCKET_NAME)
-        .download(img.storage_path);
+      // 优先使用直接传入的 buffer
+      if (img.buffer) {
+        return img.buffer;
+      }
       
-      if (error || !data) throw new Error(`Failed to download image: ${img.storage_path}`);
-      return Buffer.from(await data.arrayBuffer());
+      // 否则从 storage 下载
+      if (img.storage_path) {
+        const { data, error } = await supabaseAdmin.storage
+          .from(BUCKET_NAME)
+          .download(img.storage_path);
+        
+        if (error || !data) throw new Error(`Failed to download image: ${img.storage_path}`);
+        return Buffer.from(await data.arrayBuffer());
+      }
+      
+      throw new Error('Invalid image item: missing buffer or storage_path');
     })
   );
 
