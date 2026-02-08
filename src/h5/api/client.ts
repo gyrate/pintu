@@ -1,53 +1,71 @@
 import router from '../router';
+import { showLoadingToast, closeToast } from 'vant';
 
 const API_BASE = '/api';
 
-export async function request(endpoint: string, options: RequestInit = {}) {
+interface RequestOptions extends RequestInit {
+    loading?: boolean; // 扩展选项：是否显示 loading，默认 true
+}
+
+export async function request(endpoint: string, options: RequestOptions = {}) {
+  const { loading = true, ...fetchOptions } = options;
   const url = `${API_BASE}${endpoint}`;
   
   const token = localStorage.getItem('pintu_token');
   
   const headers: any = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...fetchOptions.headers,
   };
   
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    localStorage.removeItem('pintu_token');
-    localStorage.removeItem('pintu_user');
-    router.push('/login');
-    throw new Error('Authentication required');
+  let toast = null;
+  if (loading) {
+      toast = showLoadingToast({
+          message: '加载中...',
+          forbidClick: true,
+          duration: 0 // 持续展示
+      });
   }
 
-  const text = await response.text();
-  let data;
   try {
-      data = text ? JSON.parse(text) : {};
-  } catch (error) {
-      console.error('Failed to parse response as JSON:', text);
-      // Even if JSON parsing fails, check if response was ok (though unlikely for API)
-      if (!response.ok) {
-          throw new Error(response.statusText || 'Network response was not ok');
+    const response = await fetch(url, {
+        ...fetchOptions,
+        headers,
+    });
+
+    if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('pintu_token');
+        localStorage.removeItem('pintu_user');
+        router.push('/login');
+        throw new Error('Authentication required');
+    }
+
+    const text = await response.text();
+    let data;
+    try {
+        data = text ? JSON.parse(text) : {};
+    } catch (error) {
+        console.error('Failed to parse response as JSON:', text);
+        if (!response.ok) {
+            throw new Error(response.statusText || 'Network response was not ok');
+        }
+        throw new Error('Invalid JSON response');
+    }
+
+    if (!response.ok) {
+        throw new Error(data.error || 'Network response was not ok');
+    }
+
+    return data;
+  } finally {
+      if (toast) {
+          toast.close();
       }
-      // If ok but not JSON, maybe return text? Or empty object?
-      // For this API, we expect JSON.
-      throw new Error('Invalid JSON response');
   }
-
-  if (!response.ok) {
-    throw new Error(data.error || 'Network response was not ok');
-  }
-
-  return data;
 }
 
 export const api = {
@@ -90,22 +108,32 @@ export const api = {
       (headers as any)['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE}/images/upload`, {
-      method: 'POST',
-      headers,
-      body: formData
+    const toast = showLoadingToast({
+        message: '上传中...',
+        forbidClick: true,
+        duration: 0
     });
-    
-    if (response.status === 401 || response.status === 403) {
-      localStorage.removeItem('pintu_token');
-      localStorage.removeItem('pintu_user');
-      router.push('/login');
-      throw new Error('Authentication required');
-    }
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Upload failed');
-    return data;
+    try {
+        const response = await fetch(`${API_BASE}/images/upload`, {
+          method: 'POST',
+          headers,
+          body: formData
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('pintu_token');
+          localStorage.removeItem('pintu_user');
+          router.push('/login');
+          throw new Error('Authentication required');
+        }
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Upload failed');
+        return data;
+    } finally {
+        toast.close();
+    }
   },
 
   deleteImage: (id: string) => request(`/images/${id}`, {
