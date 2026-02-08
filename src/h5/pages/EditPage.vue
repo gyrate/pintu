@@ -78,29 +78,67 @@ const afterRead = async (items: any) => {
     processFiles = files.slice(0, remainingCount);
   }
   
-  for (const file of processFiles) {
-    if (!file || !file.file) continue;
-    
-    // 创建临时预览 URL
-    const tempUrl = URL.createObjectURL(file.file);
-    
-    // 获取图片尺寸
-    const dimensions = await new Promise<{width: number, height: number}>((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve({ width: img.width, height: img.height });
-      img.onerror = () => resolve({ width: 0, height: 0 });
-      img.src = tempUrl;
-    });
+  // 增加 loading 提示，防止处理大图时界面看起来卡死
+  const toast = showLoadingToast({ message: '图片处理中...', forbidClick: true, duration: 0 });
+  
+  try {
+    for (const fileItem of processFiles) {
+      if (!fileItem || !fileItem.file) continue;
+      
+      let processedFile = fileItem.file;
 
-    images.value.push({
-      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      url: tempUrl,
-      isTemp: true,
-      file: file.file,
-      fileSize: file.file.size,
-      width: dimensions.width,
-      height: dimensions.height
-    });
+      // 关键修复：立即压缩
+      // 如果图片大于 1MB，则进行压缩，避免 createObjectURL 对大文件占用过多内存导致崩溃
+      if (processedFile.size > 5 * 1024 * 1024) {
+          try {
+              processedFile = await new Promise((resolve) => {
+                  new Compressor(processedFile, {
+                      quality: 0.6, // 降低质量以节省内存
+                      maxWidth: 1920 * 2, // 限制最大宽度
+                      maxHeight: 1920 * 2,
+                      success(result) {
+                          // Compressor 返回的是 Blob，我们需要将其转回 File 对象以保持兼容性
+                          const newFile = new File([result], fileItem.file.name, {
+                              type: result.type,
+                              lastModified: Date.now(),
+                          });
+                          console.log(`Compressed in afterRead: ${fileItem.file.size} -> ${newFile.size}`);
+                          resolve(newFile);
+                      },
+                      error(err) {
+                          console.warn('Compression failed in afterRead:', err);
+                          resolve(processedFile); // 失败则使用原图
+                      }
+                  });
+              });
+          } catch (e) {
+              console.warn('Compression exception in afterRead:', e);
+          }
+      }
+
+      // 使用处理后（已压缩）的文件创建预览 URL
+      const tempUrl = URL.createObjectURL(processedFile);
+      
+      // 获取图片尺寸
+      const dimensions = await new Promise<{width: number, height: number}>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.width, height: img.height });
+        img.onerror = () => resolve({ width: 0, height: 0 });
+        img.src = tempUrl;
+      });
+
+      images.value.push({
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        url: tempUrl,
+        isTemp: true,
+        file: processedFile, // 保存已压缩的文件
+        fileSize: processedFile.size,
+        width: dimensions.width,
+        height: dimensions.height
+      });
+    }
+  } finally {
+      toast.close();
   }
   
   // 仅在本地状态更新，不立即触发保存/上传
@@ -120,6 +158,7 @@ const saveTask = async (silent = false) => {
           
           let fileToUpload = img.file;
           // 检查文件大小，如果超过 4.5MB 则进行压缩
+          // 注意：如果 afterRead 已经压缩过，这里的文件大小应该已经很小了，不会触发二次压缩
           if (fileToUpload.size > 4.5 * 1024 * 1024) {
             console.log(`Image size ${fileToUpload.size} exceeds 4.5MB, compressing...`);
             
