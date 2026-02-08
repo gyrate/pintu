@@ -31,6 +31,10 @@ const loadTask = async () => {
   try {
     const data = await api.getTask(taskId);
     task.value = data;
+    // 保存原始状态用于比较 
+    task.value.original_name = data.name;
+    task.value.original_direction = data.direction;
+    task.value.original_image_ids = (data.images || []).map((img: any) => img.id).join(',');
     images.value = data.images || [];
     if (data.status === 'completed' && data.export_url) {
       previewUrl.value = data.export_url;
@@ -66,9 +70,11 @@ const saveTask = async (silent = false) => {
   
   try {
     // 1. 先处理所有待上传的临时图片
+    let hasNewUploads = false;
     const uploadPromises = images.value.map(async (img) => {
       if (img.isTemp && img.file) {
         try {
+          hasNewUploads = true;
           // 上传图片并获取真实数据
           const uploadedImg = await api.uploadImage(img.file, taskId);
           return uploadedImg; // 返回上传后的图片对象
@@ -81,20 +87,63 @@ const saveTask = async (silent = false) => {
     });
 
     const processedImages = await Promise.all(uploadPromises);
-    images.value = processedImages; // 更新本地列表为真实数据
-
-    // 2. 更新任务信息（包含所有图片的关联）
-    const imageIds = images.value.map(img => img.id);
-    await api.updateTask(taskId, {
-      name: task.value.name,
-      direction: task.value.direction,
-      images: imageIds
+    
+    // 检查是否有变更（图片列表/顺序变更，或有新上传）
+    // 简单比较 ID 列表是否变化。注意：新上传的图片 ID 从 'temp-xxx' 变成了真实 ID，所以肯定会变
+    // 如果没有新上传，比较 processedImages 的 IDs 和 task.value.images 的 IDs 是否一致
+    // 注意：loadTask 加载的数据结构中，task.value.images 是对象数组，需要提取 id 并按顺序组合
+    // 并且要确保与 processedImages 中的顺序一致（因为用户可能在页面上拖拽排序了）
+    const currentIds = processedImages.map(img => img.id).join(',');
+    
+    // 获取原始加载时的图片 ID 序列（假设 loadTask 中正确设置了 images.value）
+    // 如果没有专门保存 original_image_ids，可以使用 loadTask 时保存的 task.value.images 来比较
+    // 但要注意，task.value.images 在 loadTask 后会被赋值给 images.value，并在页面操作中被修改
+    // 所以必须依赖 loadTask 中保存的副本，或者在此处直接比较
+    // 之前代码逻辑是：const originalIds = (task.value.images || []).map((img: any) => img.id).join(',');
+    // 问题在于：loadTask 中 images.value = data.images，之后 task.value.images 并没有被深度克隆或锁定
+    // 如果 task.value.images 和 images.value 指向同一个引用，或者 images.value 的修改没影响到 task.value.images
+    
+    // 正确的做法：在 loadTask 中保存 original_image_ids
+    const originalIds = task.value.original_image_ids || '';
+    
+    console.log('Change detection:', {
+        hasNewUploads,
+        currentIds,
+        originalIds,
+        nameChanged: task.value.name !== task.value.original_name,
+        dirChanged: task.value.direction !== task.value.original_direction
     });
     
-    if (!silent) {
-      toast?.close();
-      showToast('保存成功');
+    // 还需要检查其他字段如 name, direction
+    const isInfoChanged = task.value.name !== task.value.original_name || 
+                          task.value.direction !== task.value.original_direction;
+// debugger
+    // 只有在数据有变更时才调用更新接口
+    if (hasNewUploads || currentIds !== originalIds || isInfoChanged) {
+        images.value = processedImages; // 更新本地列表为真实数据
+        
+        // 2. 更新任务信息（包含所有图片的关联）
+        const imageIds = images.value.map(img => img.id);
+        await api.updateTask(taskId, {
+          name: task.value.name,
+          direction: task.value.direction,
+          images: imageIds // 传递图片 ID 列表，后端会重新关联
+        });
+        
+        // 重新加载任务以确保数据同步
+        await loadTask();
+        
+        if (!silent) {
+          toast?.close();
+          showToast('保存成功');
+        }
+    } else {
+        if (!silent) {
+          toast?.close();
+          showToast('无更改需要保存');
+        }
     }
+
   } catch (error: any) {
     if (!silent) {
       toast?.close();
