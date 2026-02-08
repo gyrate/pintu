@@ -316,6 +316,12 @@ const viewPreview = () => {
     showImagePreview([previewUrl.value]);
   }
 };
+
+const viewImage = (url: string) => {
+  if (url) {
+    showImagePreview([url]);
+  }
+};
 </script>
 
 <template>
@@ -346,7 +352,7 @@ const viewPreview = () => {
 
     <div class="image-list">
       <div v-for="(img, index) in images" :key="img.id" class="image-item">
-        <div class="img-wrapper">
+        <div class="img-wrapper" @click="viewImage(img.url)">
           <van-image fit="cover" :src="img.url" class="thumbnail" />
         </div>
         <div class="img-info">
@@ -377,7 +383,7 @@ const viewPreview = () => {
       >
         <div class="upload-btn">
           <Upload :size="24" color="#969799" />
-          <span>添加图片，文件不大于50MB/张</span>
+          <span>添加图片</span>
         </div>
       </van-uploader>
     </div>
