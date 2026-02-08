@@ -313,13 +313,21 @@ const onExport = async () => {
 
 const viewPreview = () => {
   if (previewUrl.value) {
-    showImagePreview([previewUrl.value]);
+    showImagePreview({
+      images: [previewUrl.value],
+      closeable: true,
+      closeOnClickOverlay: true // 点击遮罩关闭
+    });
   }
 };
 
 const viewImage = (url: string) => {
   if (url) {
-    showImagePreview([url]);
+    showImagePreview({
+      images: [url],
+      closeable: true,
+      closeOnClickOverlay: true // 点击遮罩关闭
+    });
   }
 };
 </script>
