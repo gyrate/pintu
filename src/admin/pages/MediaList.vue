@@ -2,7 +2,7 @@
 import { ref, onMounted, reactive } from 'vue';
 import { api } from '../api/client';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Grid, List } from '@element-plus/icons-vue';
+import { Grid, List, Refresh } from '@element-plus/icons-vue';
 
 const images = ref([]);
 const loading = ref(false);
@@ -115,6 +115,7 @@ onMounted(loadImages);
           >
             批量删除
           </el-button>
+          <el-button :icon="Refresh" circle @click="loadImages" />
         </div>
         <el-radio-group v-model="viewMode" size="small" @change="handleViewModeChange">
             <el-radio-button label="grid">
@@ -140,6 +141,8 @@ onMounted(loadImages);
                     class="image-thumb"
                     :preview-src-list="[img.url]"
                     preview-teleported
+                    :close-on-press-escape="true"
+                    :hide-on-click-modal="true"
                 />
                 <div class="image-info">
                     <div class="image-name" :title="img.original_name">{{ img.original_name }}</div>
@@ -163,6 +166,8 @@ onMounted(loadImages);
                         :src="scope.row.url" 
                         :preview-src-list="[scope.row.url]"
                         preview-teleported
+                        :close-on-press-escape="true"
+                        :hide-on-click-modal="true"
                         style="width: 60px; height: 60px"
                     />
                 </template>

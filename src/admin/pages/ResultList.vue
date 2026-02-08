@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive } from 'vue';
 import { api } from '../api/client';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Refresh } from '@element-plus/icons-vue';
 
 const results = ref([]);
 const loading = ref(false);
@@ -101,6 +102,7 @@ onMounted(loadResults);
           >
             批量删除
           </el-button>
+          <el-button :icon="Refresh" circle @click="loadResults" />
         </div>
       </div>
     </div>
@@ -118,6 +120,8 @@ onMounted(loadResults);
             :src="scope.row.export_url" 
             :preview-src-list="[scope.row.export_url]"
             preview-teleported
+            :close-on-press-escape="true"
+            :hide-on-click-modal="true"
             style="width: 100px; height: 100px; object-fit: contain; border: 1px solid #eee;"
           />
         </template>

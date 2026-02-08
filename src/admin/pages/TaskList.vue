@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive } from 'vue';
 import { api } from '../api/client';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Refresh } from '@element-plus/icons-vue';
 
 const tasks = ref([]);
 const loading = ref(false);
@@ -102,6 +103,7 @@ onMounted(loadTasks);
         >
           批量删除
         </el-button>
+        <el-button :icon="Refresh" circle @click="loadTasks" />
       </div>
     </div>
 
@@ -142,6 +144,8 @@ onMounted(loadTasks);
             :preview-src-list="[scope.row.export_url]"
             style="width: 50px; height: 50px"
             preview-teleported
+            :close-on-press-escape="true"
+            :hide-on-click-modal="true"
           />
           <span v-else>-</span>
         </template>
