@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api/client';
 import { showToast, showLoadingToast, closeToast, showImagePreview } from 'vant';
 import { ArrowUp, ArrowDown, X, Upload } from 'lucide-vue-next';
+import Compressor from 'compressorjs';
 
 const route = useRoute();
 const router = useRouter();
@@ -15,10 +16,7 @@ const previewUrl = ref('');
 const showPreview = ref(false);
 const saving = ref(false);
 
-const directionOptions = [
-  { text: '向下拼接', value: 'down' },
-  { text: '向右拼接', value: 'right' },
-];
+
 
 onMounted(async () => {
   if (taskId) {
@@ -52,6 +50,12 @@ const onOversize = () => {
   showToast('文件大小不能超过 10MB');
 };
 
+const formatSize = (size: number) => {
+  if (size < 1024) return size + ' B';
+  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
+  return (size / (1024 * 1024)).toFixed(1) + ' MB';
+};
+
 const afterRead = async (items: any) => {
   if (!items) return;
   
@@ -74,19 +78,30 @@ const afterRead = async (items: any) => {
     processFiles = files.slice(0, remainingCount);
   }
   
-  processFiles.forEach((file: any) => {
-    if (!file || !file.file) return;
+  for (const file of processFiles) {
+    if (!file || !file.file) continue;
     
     // 创建临时预览 URL
     const tempUrl = URL.createObjectURL(file.file);
     
+    // 获取图片尺寸
+    const dimensions = await new Promise<{width: number, height: number}>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.width, height: img.height });
+      img.onerror = () => resolve({ width: 0, height: 0 });
+      img.src = tempUrl;
+    });
+
     images.value.push({
-      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // 增加随机后缀防止快速添加时 ID 冲突
+      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       url: tempUrl,
       isTemp: true,
-      file: file.file
+      file: file.file,
+      fileSize: file.file.size,
+      width: dimensions.width,
+      height: dimensions.height
     });
-  });
+  }
   
   // 仅在本地状态更新，不立即触发保存/上传
 };
@@ -102,8 +117,45 @@ const saveTask = async (silent = false) => {
       if (img.isTemp && img.file) {
         try {
           hasNewUploads = true;
+          
+          let fileToUpload = img.file;
+          // 检查文件大小，如果超过 4.5MB 则进行压缩
+          if (fileToUpload.size > 4.5 * 1024 * 1024) {
+            console.log(`Image size ${fileToUpload.size} exceeds 4.5MB, compressing...`);
+            
+            // 显示压缩提示，但不关闭保存的 loading toast
+            // 由于 Vant Toast 是单例的，新的 toast 会覆盖旧的
+            // 所以这里使用一个新的 toast，并在压缩完成后恢复原来的提示或让后续逻辑处理
+            const compressToast = showLoadingToast({ message: '图片压缩中...', forbidClick: true, duration: 0 });
+            
+            try {
+                fileToUpload = await new Promise((resolve, reject) => {
+                  new Compressor(fileToUpload, {
+                    quality: 0.8,
+                    maxWidth: 1920 * 2,
+                    maxHeight: 1920 * 2,
+                    success(result) {
+                      console.log(`Compressed size: ${result.size}`);
+                      resolve(result);
+                    },
+                    error(err) {
+                      console.error('Compression error:', err);
+                      // 压缩失败则使用原图，或者也可以 reject
+                      resolve(fileToUpload); 
+                    },
+                  });
+                });
+            } finally {
+                // 压缩结束，恢复保存提示
+                compressToast.close();
+                if (!silent) {
+                    showLoadingToast({ message: '保存中...', forbidClick: true, duration: 0 });
+                }
+            }
+          }
+
           // 上传图片并获取真实数据
-          const uploadedImg = await api.uploadImage(img.file, taskId);
+          const uploadedImg = await api.uploadImage(fileToUpload, taskId);
           return uploadedImg; // 返回上传后的图片对象
         } catch (e) {
           console.error('Failed to upload image', e);
@@ -258,6 +310,10 @@ const viewPreview = () => {
         <div class="img-wrapper">
           <van-image fit="cover" :src="img.url" class="thumbnail" />
         </div>
+        <div class="img-info">
+          <div class="size-info" v-if="img.fileSize">{{ formatSize(img.fileSize) }}</div>
+          <div class="dim-info" v-if="img.width && img.height">{{ img.width }}x{{ img.height }}</div>
+        </div>
         <div class="actions">
           <van-button size="mini" icon="arrow-up" @click="moveImage(index, -1)" :disabled="index === 0">
             <template #icon><ArrowUp :size="14"/></template>
@@ -277,12 +333,12 @@ const viewPreview = () => {
         class="uploader-wrapper" 
         multiple 
         :max-count="10" 
-        :max-size="10 * 1024 * 1024"
+        :max-size="50 * 1024 * 1024"
         @oversize="onOversize"
       >
         <div class="upload-btn">
           <Upload :size="24" color="#969799" />
-          <span>添加图片</span>
+          <span>添加图片，文件不大于50MB/张</span>
         </div>
       </van-uploader>
     </div>
@@ -380,8 +436,22 @@ const viewPreview = () => {
   overflow: hidden;
 }
 
-.actions {
+.img-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 12px;
+  color: #646566;
+  margin-right: 8px;
+}
+
+.size-info {
+  margin-bottom: 4px;
+}
+
+.actions {
+  /* flex: 1;  移除 flex: 1，由 img-info 占据剩余空间 */
   display: flex;
   justify-content: flex-end;
   gap: 8px;

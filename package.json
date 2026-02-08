@@ -19,6 +19,7 @@
     "@types/crypto-js": "^4.2.2",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "compressorjs": "^1.2.1",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.1",
