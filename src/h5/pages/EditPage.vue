@@ -48,17 +48,44 @@ const loadTask = async () => {
 
 const pendingFiles = ref<File[]>([]);
 
-const afterRead = async (file: any) => {
-  if (!file || !file.file) return;
+const onOversize = () => {
+  showToast('文件大小不能超过 10MB');
+};
+
+const afterRead = async (items: any) => {
+  if (!items) return;
   
-  // 创建临时预览 URL
-  const tempUrl = URL.createObjectURL(file.file);
+  // 转换为数组统一处理（单选时 items 是对象，多选时是数组）
+  const files = Array.isArray(items) ? items : [items];
   
-  images.value.push({
-    id: `temp-${Date.now()}`,
-    url: tempUrl,
-    isTemp: true,
-    file: file.file
+  // 检查数量限制
+  const maxCount = 10;
+  const currentCount = images.value.length;
+  const remainingCount = maxCount - currentCount;
+  
+  if (remainingCount <= 0) {
+    showToast(`最多只能添加 ${maxCount} 张图片`);
+    return;
+  }
+  
+  let processFiles = files;
+  if (files.length > remainingCount) {
+    showToast(`最多只能再添加 ${remainingCount} 张图片，已自动截取`);
+    processFiles = files.slice(0, remainingCount);
+  }
+  
+  processFiles.forEach((file: any) => {
+    if (!file || !file.file) return;
+    
+    // 创建临时预览 URL
+    const tempUrl = URL.createObjectURL(file.file);
+    
+    images.value.push({
+      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // 增加随机后缀防止快速添加时 ID 冲突
+      url: tempUrl,
+      isTemp: true,
+      file: file.file
+    });
   });
   
   // 仅在本地状态更新，不立即触发保存/上传
@@ -245,7 +272,14 @@ const viewPreview = () => {
       </div>
       
       <!-- Upload Button -->
-      <van-uploader :after-read="afterRead" class="uploader-wrapper">
+      <van-uploader 
+        :after-read="afterRead" 
+        class="uploader-wrapper" 
+        multiple 
+        :max-count="10" 
+        :max-size="10 * 1024 * 1024"
+        @oversize="onOversize"
+      >
         <div class="upload-btn">
           <Upload :size="24" color="#969799" />
           <span>添加图片</span>
@@ -358,17 +392,25 @@ const viewPreview = () => {
   display: block;
 }
 
+/* 强制让 Vant Uploader 的内部容器宽度也撑满 */
+.uploader-wrapper :deep(.van-uploader__wrapper),
+.uploader-wrapper :deep(.van-uploader__upload),
+.uploader-wrapper :deep(.van-uploader__input-wrapper) {
+  width: 100%;
+  margin: 0;
+}
+
 .upload-btn {
   width: 100%;
-  height: 60px;
+  height: 100px; /* 调整为与 image-item (80px + padding 20px) 近似的高度 */
   border: 1px dashed #ebedf0;
-  background: white;
+  background: rgb(234, 243, 232);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #969799;
+  color: #969998;
   font-size: 14px;
 }
 
