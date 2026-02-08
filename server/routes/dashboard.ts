@@ -56,8 +56,53 @@ async function getTrendData(table: string, timeField: string, days: number) {
         .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// 辅助函数：按月聚合数据（最近 N 个月）
+async function getMonthlyTrendData(table: string, timeField: string, months: number = 12) {
+    // 获取起始时间
+    const start = new Date();
+    start.setMonth(start.getMonth() - (months - 1)); // - (N-1) 是因为当前月也算一个月
+    start.setDate(1); // 从该月 1 号开始
+    start.setHours(0, 0, 0, 0);
+
+    const { data, error } = await supabaseAdmin
+        .from(table)
+        .select(timeField)
+        .gte(timeField, start.toISOString());
+
+    if (error) {
+        console.warn(`getMonthlyTrendData failed for ${table}:`, error.message);
+        return [];
+    }
+    if (!data) return [];
+
+    const map = new Map<string, number>();
+    
+    // 初始化最近 N 个月
+    for (let i = 0; i < months; i++) {
+        const d = new Date(start);
+        d.setMonth(d.getMonth() + i);
+        const key = d.toISOString().slice(0, 7); // YYYY-MM
+        map.set(key, 0);
+    }
+
+    data.forEach((item: any) => {
+        const dateStr = new Date(item[timeField]).toISOString().slice(0, 7); // YYYY-MM
+        if (map.has(dateStr)) {
+            map.set(dateStr, (map.get(dateStr) || 0) + 1);
+        }
+    });
+
+    return Array.from(map.entries())
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 router.get('/stats', async (req, res) => {
     try {
+        const { range, taskRange } = req.query; // 获取 range (图片) 和 taskRange (任务) 参数
+        const imageMonths = range ? parseInt(range as string, 10) : 12;
+        const taskDays = taskRange ? parseInt(taskRange as string, 10) : 30;
+
         // 1. 基础计数 (Total Counts)
         // 使用 head: true 来只获取 count，不拉取数据
         const [
@@ -75,11 +120,9 @@ router.get('/stats', async (req, res) => {
         ]);
 
         // 2. 趋势数据 (Trends)
-        // 默认获取最近 30 天的数据
-        const days = 30;
-        const [taskTrend, loginTrend] = await Promise.all([
-            getTrendData('tasks', 'created_at', days),
-            getTrendData('login_logs', 'login_at', days)
+        const [taskTrend, imageMonthlyTrend] = await Promise.all([
+            getTrendData('tasks', 'created_at', taskDays),
+            getMonthlyTrendData('images', 'created_at', imageMonths)
         ]);
 
         res.json({
@@ -91,7 +134,7 @@ router.get('/stats', async (req, res) => {
             },
             trends: {
                 tasks: taskTrend,
-                logins: loginTrend
+                images: imageMonthlyTrend
             }
         });
 

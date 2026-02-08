@@ -98,5 +98,5 @@ export const api = {
     return request(url);
   },
 
-  getDashboardStats: () => request('/dashboard/stats'),
+  getDashboardStats: (range: number = 12, taskRange: number = 30) => request(`/dashboard/stats?range=${range}&taskRange=${taskRange}`),
 };

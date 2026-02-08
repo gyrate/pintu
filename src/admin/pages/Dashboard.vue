@@ -11,21 +11,29 @@ const stats = ref({
 });
 
 const taskChartRef = ref();
-const loginChartRef = ref();
+const imageChartRef = ref();
+const imageChartRange = ref(12); // 默认 12 个月
+const taskChartRange = ref(30); // 默认 30 天
 
-onMounted(async () => {
+const loadData = async () => {
   try {
-    const data = await api.getDashboardStats();
+    const data = await api.getDashboardStats(imageChartRange.value, taskChartRange.value);
     stats.value = data.counts;
 
     // Render Charts
-    initChart(taskChartRef.value, '生成任务趋势', data.trends.tasks);
-    initChart(loginChartRef.value, '用户登录趋势', data.trends.logins);
+    initChart(taskChartRef.value, `生成任务趋势 (近${taskChartRange.value}天)`, data.trends.tasks);
+    initChart(imageChartRef.value, `图片上传量 (近${imageChartRange.value}个月)`, data.trends.images);
 
   } catch (error) {
     console.error(error);
   }
-});
+};
+
+const handleRangeChange = () => {
+    loadData();
+};
+
+onMounted(loadData);
 
 const initChart = (dom: HTMLElement, title: string, data: any[]) => {
     if (!dom) return;
@@ -36,8 +44,8 @@ const initChart = (dom: HTMLElement, title: string, data: any[]) => {
     const dates = safeData.map(item => item.date);
     const values = safeData.map(item => item.count);
 
-    chart.setOption({
-        title: { text: title, left: 'center' },
+    chart.setOption({ 
+        grid: { top: 20, right: 20, left: 20, bottom: 20, containLabel: true },
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'category', data: dates },
         yAxis: { type: 'value' },
@@ -82,12 +90,33 @@ const initChart = (dom: HTMLElement, title: string, data: any[]) => {
     <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="12">
             <el-card>
+                <template #header>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>生成任务趋势</span>
+                        <el-radio-group v-model="taskChartRange" size="small" @change="handleRangeChange">
+                            <el-radio-button :label="7">近7天</el-radio-button>
+                            <el-radio-button :label="30">近30天</el-radio-button>
+                            <el-radio-button :label="90">近3个月</el-radio-button>
+                        </el-radio-group>
+                    </div>
+                </template>
                 <div ref="taskChartRef" style="height: 300px;"></div>
             </el-card>
         </el-col>
         <el-col :span="12">
             <el-card>
-                <div ref="loginChartRef" style="height: 300px;"></div>
+                <template #header>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>图片上传趋势</span>
+                        <el-radio-group v-model="imageChartRange" size="small" @change="handleRangeChange">
+                            <el-radio-button :label="1">近1个月</el-radio-button>
+                            <el-radio-button :label="3">近3个月</el-radio-button>
+                            <el-radio-button :label="6">近半年</el-radio-button>
+                            <el-radio-button :label="12">近一年</el-radio-button>
+                        </el-radio-group>
+                    </div>
+                </template>
+                <div ref="imageChartRef" style="height: 300px;"></div>
             </el-card>
         </el-col>
     </el-row>

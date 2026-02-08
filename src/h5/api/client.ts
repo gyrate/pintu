@@ -142,5 +142,7 @@ export const api = {
   
   exportTask: (id: string) => request(`/tasks/${id}/export`, {
     method: 'POST'
-  })
+  }),
+
+  getDashboardStats: (range: number = 12, taskRange: number = 30) => request(`/dashboard/stats?range=${range}&taskRange=${taskRange}`),
 };
